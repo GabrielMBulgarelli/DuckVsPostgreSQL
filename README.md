@@ -1,7 +1,10 @@
 # Proyecto Final
 
 CI0141 Bases de Datos Avanzadas
-Marco Piedra Venegas A64397
+Marco Piedra Venegas - A64397
+Alejandro Jiménez Corea - B84032
+Daniel Artavia - B70771
+Gabriel Molina Bulgarelli - C14826
 
 ## Introducción
 
