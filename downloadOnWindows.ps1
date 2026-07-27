@@ -30,6 +30,7 @@ foreach ($url in $urls) {
         
         # Define the output path
         $outputPath = Join-Path -Path $outputDirectory -ChildPath $filename
+        $tempOutputPath = "$outputPath.part"
         
         # Increment the processed files counter
         $processedFiles++
@@ -38,7 +39,8 @@ foreach ($url in $urls) {
         if (-Not (Test-Path -Path $outputPath)) {
             # Download the file if it doesn't exist
             Write-Host "[$processedFiles/$totalFiles] Downloading: $url"
-            $webClient.DownloadFile($url, $outputPath)
+            $webClient.DownloadFile($url, $tempOutputPath)
+            Move-Item -Path $tempOutputPath -Destination $outputPath -Force
             Write-Host "Downloaded to: $outputPath"
         } else {
             Write-Host "[$processedFiles/$totalFiles] Skipping (already exists): $outputPath"

@@ -1,166 +1,248 @@
-# DuckDB vs. PostgreSQL: Performance Benchmark on Large Datasets
+# DuckDB vs. PostgreSQL: Analytical Performance Benchmark
 
-## Universidad de Costa Rica (UCR) - CI0141
+A reproducible comparison of DuckDB and PostgreSQL using 25.2 GB of NYC trip data stored across 62 Parquet files.
 
-**Estudiante:** Gabriel Molina Bulgarelli  
-**ID:** C14826  
+## Benchmark at a Glance
 
-This project compares the performance of DuckDB and PostgreSQL in analyzing large datasets. The focus is on evaluating the efficiency and feasibility of DuckDB, an embedded database optimized for data analysis, against PostgreSQL, a traditional relational database engine.
+| Property | Value |
+|---|---|
+| Dataset | NYC High-Volume For-Hire Vehicle Trip Records |
+| Period | February 2019–March 2024 |
+| Files | 62 Parquet files |
+| Dataset size | 25.2 GB |
+| Databases | DuckDB and PostgreSQL |
+| Workload | Regression and borough-level aggregation |
+| Main result | DuckDB completed both tested analytical queries faster |
 
-## Introduction
+| Query | DuckDB | PostgreSQL | DuckDB speedup |
+|---|---:|---:|---:|
+| Query A — Regression analysis | 47.937 s | 81.109 s | 1.69× |
+| Query B — Borough-level aggregation | 55.271 s | 172.682 s | 3.12× |
 
-In this project, we explore the capabilities of DuckDB, an embedded, columnar, and vectorized database optimized for data analysis, and compare its performance with PostgreSQL, a traditional relational database. The evaluation is based on executing specific analytical queries on a large dataset of taxi trips in New York City.
+These are the means published in the original report from three cold executions. See [Results](#results) for the individual measurements and methodology.
+
+## Overview
+
+This project evaluates the analytical performance of DuckDB and PostgreSQL using a large collection of NYC high-volume for-hire vehicle trip records.
+
+DuckDB processes the source Parquet files directly using its columnar and vectorized execution engine. PostgreSQL processes an imported relational table containing the equivalent benchmark columns.
+
+The comparison focuses on two analytical workloads: statistical regression over the complete dataset and aggregation by New York City borough.
 
 ## Objectives
 
-- Evaluate the effectiveness and performance of DuckDB compared to PostgreSQL.
-- Determine the feasibility of DuckDB for large-scale data analysis.
+- Compare DuckDB and PostgreSQL execution times for analytical SQL workloads.
+- Evaluate DuckDB's ability to query large Parquet datasets directly.
+- Compare direct Parquet analysis with analysis over imported PostgreSQL tables.
+- Document the setup and queries so the experiment can be reproduced.
+- Identify the practical strengths and limitations of each database system.
 
-## Dataset Description
+## Dataset
 
-The dataset consists of high-volume for-hire vehicle trips in New York City from February 2019 to March 2024. It includes 62 Parquet files totaling 25.2 GB. Each file contains various trip attributes such as the provider code, start and end timestamps, trip distance, trip time, base fare, driver payment, and tips.
+The benchmark uses NYC Taxi and Limousine Commission High-Volume For-Hire Vehicle Trip Records. The 62 monthly Parquet files cover February 2019 through March 2024 and total approximately 25.2 GB.
 
-# User Manual
+The benchmark columns describe pickup and drop-off locations, trip distance and duration, base passenger fare, and driver pay. Query B also uses the included taxi-zone lookup table to map pickup location IDs to boroughs.
 
-## Installation
+## Benchmark Environment
 
-To run this project, you need to have DuckDB and PostgreSQL installed on your system.
+The original measurements were collected on this machine:
 
-### DuckDB
+| Component | Specification |
+|---|---|
+| Computer | Dell XPS 13 9315 |
+| Processor | Intel Core i5-1230U, 12 logical CPUs |
+| Memory | 8 GB DDR5 RAM |
+| Operating system | Debian GNU/Linux 12.6 (Bookworm) |
 
-Download and install DuckDB from [DuckDB.org](https://duckdb.org/).
+DuckDB and PostgreSQL ran on the same computer and used the same source dataset.
 
-### PostgreSQL
+## Benchmark Methodology
 
-Download and install PostgreSQL from [PostgreSQL.org](https://www.postgresql.org/download/).
+The same analytical operations were implemented for both databases using equivalent source columns. Each database-and-query combination was measured three times. Every execution was run cold: the DuckDB CLI process was exited and restarted before a DuckDB run, while the PostgreSQL service was stopped and restarted before a PostgreSQL run.
 
-### Downloading Parquet Files
+The tables below use the arithmetic means published in the report for the three executions.
 
-Use the provided scripts to download the Parquet files. Each command should be executed in the repository's directory.
+| Setting | Value |
+|---|---|
+| Measured runs | 3 per database and query |
+| Reported statistic | Arithmetic mean |
+| Execution condition | DuckDB process or PostgreSQL service restarted before each run |
 
-#### On Linux:
+### Comparison Scope
 
-Run the `downloadOnLinux.sh` script using bash:
+This experiment compares two practical analytical workflows:
 
-```sh
+- DuckDB reading Parquet files directly.
+- PostgreSQL querying data imported into native relational tables.
+
+The result therefore reflects both database-engine behavior and differences in storage format. It should not be interpreted as a completely isolated comparison of query optimizers or execution engines.
+
+## Repository Structure
+
+```text
+.
+├── benchmarks/
+│   ├── duckdb/
+│   │   ├── queries.sql
+│   │   └── setup.sql
+│   └── postgresql/
+│       ├── queries.sql
+│       └── setup.sql
+├── data-dictionary/
+│   ├── taxi_zone_lookup.csv
+│   └── supporting data dictionaries and maps
+├── datasets/
+│   └── datasets.txt
+├── documents/
+│   ├── Investigation_CI0141Project.pdf
+│   └── Presentation_CI0141Project.pdf
+├── results/
+│   ├── raw-results.csv
+│   └── summary.md
+├── downloadOnLinux.sh
+├── downloadOnWindows.ps1
+└── README.md
+```
+
+Downloaded Parquet files are intentionally excluded from Git.
+
+## Requirements
+
+Before reproducing the benchmark, install:
+
+- The [DuckDB CLI](https://duckdb.org/docs/installation/).
+- [PostgreSQL](https://www.postgresql.org/download/).
+- PowerShell on Windows, or Bash and `wget` on Linux.
+- At least 30 GB of free storage for the downloaded dataset and temporary files.
+- Additional storage for the PostgreSQL tables.
+
+The full dataset contains approximately 25.2 GB of Parquet files.
+
+## Download the Dataset
+
+The repository contains a list of NYC TLC Parquet URLs covering February 2019 through March 2024.
+
+### Linux
+
+From the repository root, run:
+
+```bash
 bash downloadOnLinux.sh
 ```
 
-#### On Windows:
+### Windows
 
-Run the `downloadOnWindows.ps1` script using PowerShell:
+From the repository root, run:
 
 ```powershell
 .\downloadOnWindows.ps1
 ```
 
-## Usage
+Both scripts download the files into `datasets/` and skip files that already exist. Downloads use temporary `.part` files so an interrupted transfer is not mistaken for a complete Parquet file.
+
+## Database Setup
+
+All commands assume the current working directory is the repository root.
 
 ### DuckDB
 
-1. **Enable Timer:**
-    Activate the timer to measure query execution time.
+Start DuckDB and load the CLI settings:
 
-    ```sql
-    .timer on
-    ```
+```text
+duckdb
+.read benchmarks/duckdb/setup.sql
+```
 
-2. **Count Rows:**
-    Count the total number of rows in all Parquet files.
-
-    ```sql
-    select count(*) from '*.parquet';
-    ```
-
-3. **Describe Data:**
-    Provide a description of the columns and data types in the Parquet files.
-
-    ```sql
-    describe select * from '*.parquet';
-    ```
-
-4. **Calculate Averages:**
-    Compute the averages for base passenger fares, driver payments, trip distances, and trip times.
-
-    ```sql
-    select avg(base_passenger_fare), avg(driver_pay), avg(trip_miles), avg(trip_time) from '*.parquet';
-    ```
-
-5. **Group by Borough:**
-    Calculate the averages for base passenger fares, driver payments, trip distances, and trip times grouped by borough in New York City.
-
-    ```sql
-    select Borough, avg(base_passenger_fare), avg(driver_pay), avg(trip_miles), avg(trip_time)
-    from read_parquet('*.parquet') join 'taxi_zone_lookup.csv' on LocationID = PULocationID
-    group by Borough;
-    ```
-
-6. **Regression Analysis:**
-    Perform a regression analysis to obtain the slope and intercept of base passenger fares and trip time.
-
-    ```sql
-    select regr_slope(base_passenger_fare, trip_time), regr_intercept(base_passenger_fare, trip_time) from '*.parquet';
-    ```
+DuckDB reads `datasets/*.parquet` directly, so it does not require a data-import step.
 
 ### PostgreSQL
 
-1. **Attach PostgreSQL Database:**
-    Connect DuckDB to an existing PostgreSQL database.
+The PostgreSQL setup is executed through DuckDB's PostgreSQL extension. Review the connection string in [`benchmarks/postgresql/setup.sql`](benchmarks/postgresql/setup.sql), then run:
 
-    ```sql
-    attach 'dbname=postgres user=postgres host=127.0.0.1' as postgres_db (type postgres);
-    ```
+```text
+duckdb
+.read benchmarks/postgresql/setup.sql
+```
 
-2. **Create Table:**
-    Create a table in PostgreSQL to store trip data.
+This recreates and populates the `nyc_tlc` and `zones` tables in PostgreSQL. It is a data-loading step and should be timed separately from query execution.
 
-    ```sql
-    create table postgres_db.nyc_tlc (
-        pulocationid int,
-        dolocationid int,
-        trip_miles double,
-        trip_time double,
-        base_passenger_fare double,
-        driver_pay double
-    );
-    ```
+The benchmark queries themselves run directly in PostgreSQL with `psql`:
 
-3. **Insert Data:**
-    Insert data from Parquet files into the PostgreSQL table.
+```bash
+psql -U postgres -d postgres -f benchmarks/postgresql/queries.sql
+```
 
-    ```sql
-    insert into postgres_db.nyc_tlc
-    select PULocationID, DOLocationID, trip_miles, trip_time, base_passenger_fare, driver_pay from '*.parquet';
-    ```
+Keeping the import and query contexts separate avoids mixing DuckDB catalog names with native PostgreSQL table names.
 
-4. **Perform Regression Analysis:**
+## Benchmark Queries
 
-    ```sql
-    SELECT
-        regr_slope(base_passenger_fare, trip_miles) AS slope_passenger_miles,
-        regr_intercept(base_passenger_fare, trip_miles) AS intercept_passenger_miles,
-        regr_slope(base_passenger_fare, trip_time) AS slope_passenger_time,
-        regr_intercept(base_passenger_fare, trip_time) AS intercept_passenger_time,
-        regr_slope(driver_pay, trip_miles) AS slope_driver_miles,
-        regr_intercept(driver_pay, trip_miles) AS intercept_driver_miles,
-        regr_slope(driver_pay, trip_time) AS slope_driver_time,
-        regr_intercept(driver_pay, trip_time) AS intercept_driver_time
-    FROM nyc_tlc;
-    ```
+The complete executable queries are in:
+
+- [`benchmarks/duckdb/queries.sql`](benchmarks/duckdb/queries.sql)
+- [`benchmarks/postgresql/queries.sql`](benchmarks/postgresql/queries.sql)
+
+### Query A — Regression Analysis
+
+Calculates slopes and intercepts relating passenger fares and driver payments to trip distance and trip duration.
+
+### Query B — Borough-Level Aggregation
+
+Joins pickup locations with the taxi-zone lookup table, then calculates average passenger fare, driver pay, trip distance, and trip duration for each borough.
+
+Run the DuckDB queries from the repository root with:
+
+```text
+duckdb
+.read benchmarks/duckdb/queries.sql
+```
 
 ## Results
 
-The results showed that DuckDB outperforms PostgreSQL in terms of query execution time. DuckDB is approximately 1.69 times faster than PostgreSQL for Query A and 3.12 times faster for Query B.
+The original report contains the following execution times. They are also available as machine-readable data in [`results/raw-results.csv`](results/raw-results.csv), with a concise summary in [`results/summary.md`](results/summary.md).
+
+| Database | Query | Run 1 | Run 2 | Run 3 | Reported mean |
+|---|---|---:|---:|---:|---:|
+| DuckDB | Query A | 47.717 s | 48.397 s | 47.700 s | 47.937 s |
+| DuckDB | Query B | 55.478 s | 55.947 s | 54.390 s | 55.271 s |
+| PostgreSQL | Query A | 81.059 s | 79.334 s | 82.933 s | 81.109 s |
+| PostgreSQL | Query B | 172.537 s | 172.816 s | 172.693 s | 172.682 s |
+
+DuckDB was approximately 1.69 times faster for Query A and 3.12 times faster for Query B, based on the reported means.
+
+The displayed run times are rounded to three decimal places. Recomputing their means produces 47.938 seconds for DuckDB Query A and 55.272 seconds for DuckDB Query B, each 0.001 seconds above the mean printed in the report. The published means and speedups are retained here as the original benchmark findings.
+
+## Interpretation
+
+In these workloads, DuckDB benefited from reading compressed, columnar Parquet data directly and applying vectorized execution to analytical operations. PostgreSQL first required the source data to be imported into relational tables.
+
+The result illustrates the practical efficiency of DuckDB for local analytical work over Parquet files. PostgreSQL remains better suited to workloads that require a persistent database server, concurrent transactional access, mature authorization controls, and broader application integration.
+
+## Limitations
+
+- DuckDB reads the source Parquet files directly, while PostgreSQL reads imported relational tables.
+- Storage format and loading strategy influence the results.
+- The results represent one computer and two analytical query patterns.
+- The benchmark focuses on single-user analytical processing.
+- Results may vary with database version, hardware, memory, caching, storage, and configuration.
+
+## Conclusion
+
+In the tested analytical workloads, DuckDB completed both selected queries faster than PostgreSQL. The strongest observed advantage was Query B, where DuckDB was approximately 3.12 times faster.
+
+These results apply to the documented dataset, queries, hardware, and experimental procedure. They should not be generalized to every PostgreSQL or DuckDB workload.
+
+## Documentation
+
+- [Full investigation report](documents/Investigation_CI0141Project.pdf)
+- [Project presentation](documents/Presentation_CI0141Project.pdf)
+
+## Project Origin
+
+This project was originally developed for CI0141 at the University of Costa Rica and later organized as a reproducible database performance benchmark.
 
 ## References
 
-- Apache Parquet. (2024). Overview. https://parquet.apache.org/docs/overview/
-- Bellon, T. (2019). Gett's Juno ends NYC ride-hailing services, citing regulation. Reuters.
-- Boncz, P., Zukowski, M., & Nes, N. (2005). MonetDB/X100: Hyper-Pipelining Query Execution. VLDB.
-- DuckDB Foundation. (2024). Why DuckDB. https://duckdb.org/why_duckdb
-- EnterpriseDB. (2024). Download PostgreSQL. https://www.enterprisedb.com/downloads/postgres-postgresql-downloads
-- Li, G., & Manoharan, S. (2013). A performance comparison of SQL and NoSQL databases. IEEE PACRIM.
-- SQLite. (2024). About SQLite. https://www.sqlite.org/about.html
-- NYC TLC. (2024). TLC Trip Record Data. https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page
-- The PostgreSQL Global Development Group. (2024). About PostgreSQL. https://www.postgresql.org/about/
-- West, M. (2011). Developing high-quality data models. Elsevier eBooks.
+- [Apache Parquet documentation](https://parquet.apache.org/docs/overview/)
+- [DuckDB: Why DuckDB](https://duckdb.org/why_duckdb)
+- [NYC TLC Trip Record Data](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page)
+- [PostgreSQL overview](https://www.postgresql.org/about/)

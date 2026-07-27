@@ -1,0 +1,13 @@
+database,query,run_number,execution_time_seconds,cache_state
+DuckDB,Query A,1,47.717,cold
+DuckDB,Query A,2,48.397,cold
+DuckDB,Query A,3,47.700,cold
+DuckDB,Query B,1,55.478,cold
+DuckDB,Query B,2,55.947,cold
+DuckDB,Query B,3,54.390,cold
+PostgreSQL,Query A,1,81.059,cold
+PostgreSQL,Query A,2,79.334,cold
+PostgreSQL,Query A,3,82.933,cold
+PostgreSQL,Query B,1,172.537,cold
+PostgreSQL,Query B,2,172.816,cold
+PostgreSQL,Query B,3,172.693,cold
